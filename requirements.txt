@@ -1,0 +1,12 @@
+# Core dependencies
+pandas>=2.0.0
+openpyxl>=3.1.0
+openai>=1.12.0
+python-dotenv>=1.0.0
+
+# GUI
+tk>=0.1.0
+tkinter-tooltip>=2.1.0
+
+# Utilities
+python-dateutil>=2.8.0
