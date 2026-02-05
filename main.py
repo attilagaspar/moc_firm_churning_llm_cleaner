@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 import json
 import threading
+import os
 from src.data_handler import DataHandler
 from src.llm_processor import LLMProcessor
 from src.config import AVAILABLE_MODELS, DEFAULT_MODEL, EVENT_TYPES
@@ -205,13 +206,23 @@ class FirmRegistryCleanerGUI:
             self.status_var.set("Loading Excel file...")
             self.root.update()
             
-            # Load data
+            # Load data (will auto-load progress if exists)
             df = self.data_handler.load_excel(file_path)
             
             # Update treeview
             self._populate_treeview(df)
             
-            self.status_var.set(f"Loaded {len(df)} rows from {file_path}")
+            # Check if we loaded progress
+            if os.path.exists(self.data_handler.auto_save_path):
+                first_unprocessed = self.data_handler.find_first_unprocessed_row()
+                if first_unprocessed >= 0:
+                    self.status_var.set(f"Loaded progress: {first_unprocessed}/{len(df)} rows done. Select row {first_unprocessed} to resume.")
+                    # Select the first unprocessed row
+                    self._select_treeview_row(first_unprocessed)
+                else:
+                    self.status_var.set(f"All {len(df)} rows already processed!")
+            else:
+                self.status_var.set(f"Loaded {len(df)} rows from {file_path}")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load file:\n{str(e)}")
@@ -280,11 +291,14 @@ class FirmRegistryCleanerGUI:
             # Update dataframe
             self.data_handler.update_row(row_index, cleaned_data)
             
+            # Auto-save after processing
+            self.data_handler.auto_save()
+            
             # Update GUI
             self._update_treeview_row(row_index)
             self._display_json(cleaned_data)
             
-            self._update_status(f"✓ Processed row {row_index}")
+            self._update_status(f"✓ Processed row {row_index} (auto-saved)")
             
         except Exception as e:
             error_msg = f"Error processing row {row_index}: {str(e)}"
@@ -359,6 +373,9 @@ class FirmRegistryCleanerGUI:
                     
                     # Update dataframe
                     self.data_handler.update_row(row_index, cleaned_data)
+                    
+                    # Auto-save after each row
+                    self.data_handler.auto_save()
                     
                     # Update GUI
                     self._update_treeview_row(row_index)

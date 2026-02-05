@@ -14,6 +14,7 @@ This tool uses OpenAI's language models to:
 ## Features
 
 - **GUI Interface**: Easy-to-use interface with Excel viewer and JSON output display
+- **Auto-Save**: Progress saved after each row - resume anytime from where you left off
 - **Batch Processing**: Process individual rows or automatically process from selected row onwards
 - **Model Selection**: Choose from various OpenAI models (default: GPT-4o-mini)
 - **Dual Output**: Enhanced XLSX file + JSON export
@@ -136,9 +137,9 @@ For large datasets, monitor your OpenAI usage at: https://platform.openai.com/us
 
 ## Notes
 
+- **Auto-Save**: The app automatically saves progress after each row to `output/[filename]_cleaned.xlsx`. If interrupted, simply reopen the same input file to resume from where you left off. See [AUTO_SAVE.md](AUTO_SAVE.md) for details.
 - The tool handles the Hungarian "macskaköröm" (") symbol, which indicates "same as above"
 - Layout errors like "P o z s o n y" are automatically corrected to "Pozsony"
-- Progress is saved after each row to prevent data loss
 - The tool creates an `output/` directory for processed files
 
 ## Troubleshooting

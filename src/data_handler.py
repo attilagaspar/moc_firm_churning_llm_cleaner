@@ -18,6 +18,7 @@ class DataHandler:
         self.df = None
         self.file_path = None
         self.output_dir = "output"
+        self.auto_save_path = None
         
         # Create output directory if it doesn't exist
         if not os.path.exists(self.output_dir):
@@ -34,19 +35,29 @@ class DataHandler:
             pandas.DataFrame: Loaded data
         """
         try:
-            # Try to read as xlsx first, then xls
-            if file_path.endswith('.xlsx'):
-                self.df = pd.read_excel(file_path, engine='openpyxl')
-            elif file_path.endswith('.xls'):
-                self.df = pd.read_excel(file_path, engine='xlrd')
-            else:
-                # Try both engines
-                try:
-                    self.df = pd.read_excel(file_path, engine='openpyxl')
-                except:
-                    self.df = pd.read_excel(file_path, engine='xlrd')
-            
             self.file_path = file_path
+            
+            # Generate fixed auto-save path based on input filename
+            base_name = os.path.basename(file_path)
+            name, ext = os.path.splitext(base_name)
+            self.auto_save_path = os.path.join(self.output_dir, f"{name}_cleaned.xlsx")
+            
+            # Check if auto-saved file exists and load it instead
+            if os.path.exists(self.auto_save_path):
+                print(f"Found existing progress file: {self.auto_save_path}")
+                self.df = pd.read_excel(self.auto_save_path, engine='openpyxl')
+            else:
+                # Load original file
+                if file_path.endswith('.xlsx'):
+                    self.df = pd.read_excel(file_path, engine='openpyxl')
+                elif file_path.endswith('.xls'):
+                    self.df = pd.read_excel(file_path, engine='xlrd')
+                else:
+                    # Try both engines
+                    try:
+                        self.df = pd.read_excel(file_path, engine='openpyxl')
+                    except:
+                        self.df = pd.read_excel(file_path, engine='xlrd')
             
             # Initialize output columns if they don't exist
             self._initialize_output_columns()
@@ -96,9 +107,21 @@ class DataHandler:
             if col in cleaned_data:
                 self.df.at[index, col] = cleaned_data[col]
     
+    def auto_save(self):
+        """
+        Auto-save the current dataframe to the fixed output path
+        """
+        if self.df is None or self.auto_save_path is None:
+            return
+        
+        try:
+            self.df.to_excel(self.auto_save_path, index=False, engine='openpyxl')
+        except Exception as e:
+            print(f"Auto-save failed: {e}")
+    
     def save_excel(self, output_path=None):
         """
-        Save DataFrame to Excel
+        Save DataFrame to Excel with timestamp
         
         Args:
             output_path: Output file path (optional)
@@ -110,7 +133,7 @@ class DataHandler:
             raise ValueError("No data to save")
         
         if output_path is None:
-            # Generate output path based on input file
+            # Generate output path with timestamp for manual saves
             base_name = os.path.basename(self.file_path)
             name, ext = os.path.splitext(base_name)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -165,6 +188,24 @@ class DataHandler:
         if self.df is None:
             return 0
         return len(self.df)
+    
+    def find_first_unprocessed_row(self):
+        """
+        Find the first row that hasn't been processed yet
+        
+        Returns:
+            int: Index of first unprocessed row, or -1 if all rows are processed
+        """
+        if self.df is None:
+            return -1
+        
+        # Check for rows where the cleaning_date column is empty
+        for idx in range(len(self.df)):
+            if pd.isna(self.df.at[idx, 'cleaning_date']) or str(self.df.at[idx, 'cleaning_date']).strip() == '':
+                return idx
+        
+        # All rows processed
+        return -1
     
     def export_row_json(self, index):
         """
